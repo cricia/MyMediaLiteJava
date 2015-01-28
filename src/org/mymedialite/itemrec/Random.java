@@ -20,7 +20,6 @@ package org.mymedialite.itemrec;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.PrintWriter;
-import org.mymedialite.itemrec.ItemRecommender;
 
 /**
  * An Item Recommender which returns random prediction values uniformly distributed between 0.0 and 1.0.
@@ -30,7 +29,7 @@ import org.mymedialite.itemrec.ItemRecommender;
  */
 public class Random extends ItemRecommender {
 
-  org.mymedialite.util.java.util.Random random;
+  org.mymedialite.util.Random random;
   
   public Random() { 
     random = new org.mymedialite.util.Random();
