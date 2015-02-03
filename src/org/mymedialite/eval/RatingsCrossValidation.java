@@ -18,12 +18,18 @@
 
 package org.mymedialite.eval;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
+
 import org.mymedialite.IIterativeModel;
 import org.mymedialite.data.IRatings;
 import org.mymedialite.data.ISplit;
 import org.mymedialite.data.RatingCrossValidationSplit;
 import org.mymedialite.ratingprediction.RatingPredictor;
+
+import br.ufu.facom.lsi.prefrec.model.PrefDataBaseIn;
+import br.ufu.facom.lsi.prefrec.model.PrefDataBaseInList;
 
 /**
  * Cross-validation for rating prediction.
@@ -76,12 +82,16 @@ public class RatingsCrossValidation {
 
     RatingPredictionEvaluationResults avg_results = new RatingPredictionEvaluationResults();
 
+    //TODO cricia Folds
+    
+    PrefDataBaseInList<PrefDataBaseIn> list = new PrefDataBaseInList<PrefDataBaseIn>();
+    
     for(int i = 0; i < split.numberOfFolds(); i++) {
       try {
         RatingPredictor split_recommender = recommender.clone(); // to avoid changes : recommender
         split_recommender.setRatings(split.train().get(i));
         split_recommender.train();
-        HashMap<String, Double> fold_results = Ratings.evaluate(split_recommender, split.test().get(i));
+        HashMap<String, Double> fold_results = Ratings.evaluate(split_recommender, split.test().get(i), list, i);
         if (compute_fit)
           fold_results.put("fit", new Double(Ratings.computeFit(split_recommender)));
 
@@ -98,6 +108,11 @@ public class RatingsCrossValidation {
         throw e;
       }
     }
+    //Serialize
+    //System.out.println(list.get(0).toString());
+    list.writeObject();
+//    list.readObject();
+//    System.out.println(list.get(0).toString());
 
     for (String key : Ratings.getMeasures()) {
       avg_results.put(key, avg_results.get(key) / split.numberOfFolds());
