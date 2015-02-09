@@ -63,9 +63,14 @@ public class Matrix<T> implements IMatrix<T>  {
     this.dim2 = dim2;
     this.data = new Object[dim1 * dim2];
     
-    if(d != null) 
-      for (int i = 0; i < dim1 * dim2; i++)
-        data[i] = d;
+    //if(d != null) 
+    //  for (int i = 0; i < dim1 * dim2; i++)
+    //    data[i] = d;
+    
+    for (int i = 0; i < dim1 * dim2; i++) {
+    	 data[i] = new Double(0);
+    }
+        
   }
 
   /**

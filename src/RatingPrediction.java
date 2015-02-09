@@ -831,7 +831,7 @@ class Miner {
 
 		Integer[] maxMult = { 3, 3, 6, 4, 1,4, 0 };//director,genre,language,star,year,country,user
 
-		Database d = new Database("../miningoutput/Fbprefrec/", attribsList, "user.cpm",
+		Database d = new Database("../miningoutput/Flixster/", attribsList, "user.cpm",
 				maxMult, ',');
 		Map<Key, FullTuple> tuples = d.getMapFullTuples();
 		return tuples;
