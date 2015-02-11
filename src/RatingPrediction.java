@@ -4,14 +4,15 @@ import java.io.FileWriter;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
 
 import org.mymedialite.IItemAttributeAwareRecommender;
 import org.mymedialite.IItemRelationAwareRecommender;
@@ -49,22 +50,10 @@ import org.mymedialite.util.Memory;
 import org.mymedialite.util.Recommender;
 import org.mymedialite.util.Utils;
 
-import prefdb.model.Bituple;
-import prefdb.model.PrefDatabase;
-import prefdb.model.PrefValue;
-import preprocessing.cv.persistence.BitupleOutput;
 import br.ufu.facom.lsi.prefrec.model.Item;
 import br.ufu.facom.lsi.prefrec.model.PrefDataBaseIn;
 import br.ufu.facom.lsi.prefrec.model.PrefDataBaseInList;
 import br.ufu.facom.lsi.prefrec.model.User;
-import control.Log;
-import control.Start;
-import control.Validation;
-import data.model.Database;
-import data.model.FullTuple;
-import data.model.Key;
-
-
 
 /**
  * Rating prediction program, see usage() method for more information.
@@ -547,11 +536,10 @@ public class RatingPrediction {
 		}
 		Model.save(recommender, save_model_file);
 		// displayStats();
-		
+
 		// Here is the action...
 		PrefDataBaseInList<PrefDataBaseIn> list = new PrefDataBaseInList<PrefDataBaseIn>();
 		list.readObject();
-		Miner miner = new Miner();
 		Map<Integer, List<User>> userByFold = list.toUserByFold();
 		File file = new File("../result_" + new Date().getTime() + ".txt");
 		// if file doesnt exists, then create it
@@ -562,35 +550,100 @@ public class RatingPrediction {
 		BufferedWriter bw = new BufferedWriter(fw);
 		for (Integer fold : userByFold.keySet()) {
 			StringBuilder content = new StringBuilder();
-			
+
 			// Map item - rate
 			HashMap<Integer, Double> itemRateMap = new HashMap<Integer, Double>();
 			// Map item - Prediction
 			HashMap<Integer, Double> itemPredictionMap = new HashMap<Integer, Double>();
 			for (User user : userByFold.get(fold)) {
 				for (Item item : user.getItems()) {
-					itemRateMap.put(Integer.parseInt(item_mapping.toOriginalID(item.getId().intValue())), item.getRate());
-					itemPredictionMap.put(Integer.parseInt(item_mapping.toOriginalID(item.getId().intValue())),
-							item.getPrediction());
+					itemRateMap.put(Integer.parseInt(item_mapping
+							.toOriginalID(item.getId().intValue())), item
+							.getRate());
+					itemPredictionMap.put(Integer.parseInt(item_mapping
+							.toOriginalID(item.getId().intValue())), item
+							.getPrediction());
+				}
+
+				double rightPrediction = 0;
+				double wrongPrediction = 0;
+				double uncomparable = 0;
+				
+				Set<Integer> alreadyAnalysed = new HashSet<>();
+
+				for (Entry<Integer, Double> entry : itemPredictionMap
+						.entrySet()) {
+					
+					//Double entryPredictedRate = Math.round(entry.getValue()*100.0)/100.0;
+					Double entryPredictedRate = entry.getValue();
+					Double entryRealRate = itemRateMap.get(entry
+							.getKey());
+					
+					for (Entry<Integer, Double> innerEntry : itemPredictionMap
+							.entrySet()) {
+
+						if (entry.getKey().equals(innerEntry.getKey()) || alreadyAnalysed.contains(innerEntry.getKey())) {
+							continue;
+						} else {
+							
+							//Double innerPredictedRate = Math.round(innerEntry.getValue()*1.0)/1.0;
+							Double innerPredictedRate = innerEntry.getValue();
+							Double innerRealRate = itemRateMap.get(innerEntry
+									.getKey());
+
+							int predictedResult = entryPredictedRate
+									.compareTo(innerPredictedRate);
+							
+							int realResult = entryRealRate
+									.compareTo(innerRealRate);
+
+							if (predictedResult == realResult
+									&& predictedResult == 0) {
+								
+								uncomparable++;
+								
+							} else if (predictedResult == realResult) {
+								
+								rightPrediction++;
+								
+							} else {
+								wrongPrediction++;
+							}
+						}						
+					}
+					alreadyAnalysed.add(entry.getKey());
 				}
 				
-				PrefDatabase prefDatabaseRate = miner
-						.toPrefDatabase(itemRateMap);
+				double precision = 0.0;
+				try{
+					
+					precision = rightPrediction / (rightPrediction + wrongPrediction);
+					
+				} catch (Exception e) {
+					System.err.println(e.getMessage());
+					e.printStackTrace();
+				}
 				
-				PrefDatabase prefDatabasePredictiion = miner
-						.toPrefDatabase(itemPredictionMap);
+				double recall = 0.0;
+				try{
+					
+					recall = rightPrediction / (rightPrediction + wrongPrediction + uncomparable);
+					
+				} catch (Exception e) {
+					System.err.println(e.getMessage());
+					e.printStackTrace();
+				}
 				
-				Validation v = new Validation();
-				v.buildModel(prefDatabasePredictiion);
-				v.runOverModel(3, prefDatabaseRate);
-				content.append(user.getId() + ";" + fold + ";" + v.getAvPrecision() + ";" + v.getAvRecall()+ System.lineSeparator());				
+				content.append(user.getId() + ";" + fold + ";"
+						+ precision + ";" + recall
+						+ System.lineSeparator());
 			}
 			bw.write(content.toString());
 			bw.flush();
 		}
 		bw.close();
 		fw.close();
-		
+
 	}
 
 	static void checkParameters() {
@@ -792,126 +845,4 @@ public class RatingPrediction {
 
 }
 
-class Miner {
 
-	private String[] attributes = { "director.cpm", "genre.cpm",
-			"language.cpm", "star.cpm", "year.cpm","country.cpm", "user.cpm" };
-
-	private Map<Key, FullTuple> features;
-	private Map<Double[][], Validation> validationMap;
-
-	public Miner() {
-		super();
-		Log.LOG_DIR = "..\\miningoutput\\log\\";
-		features = loadFeatures();
-		this.validationMap = new LinkedHashMap<>();
-		Start.prepareRandomSeed();
-	}
-
-	public void buildModels(ArrayList<Double[][]> concensualMatrixList, Map<Integer,Integer> itemList) throws Exception {
-
-		try {
-			for (Double[][] concensualMatrix : concensualMatrixList) {
-
-				Validation validation = toValidation(concensualMatrix, features, itemList);
-				// constroi o modelo (tabelas de probabilidade)
-				validation.buildModel();
-				this.validationMap.put(concensualMatrix, validation);
-			}
-		} catch (Exception e) {
-			throw e;
-		}
-
-	}
-
-	public Map<Key, FullTuple> loadFeatures() {
-
-		ArrayList<String> attribsList = new ArrayList<>();
-		attribsList.addAll(Arrays.asList(attributes));
-
-		Integer[] maxMult = { 3, 3, 6, 4, 1,4, 0 };//director,genre,language,star,year,country,user
-
-		Database d = new Database("../miningoutput/Flixster/", attribsList, "user.cpm",
-				maxMult, ',');
-		Map<Key, FullTuple> tuples = d.getMapFullTuples();
-		return tuples;
-	}
-
-	/**
-	 * 
-	 * Converte um mapa com id do item e atributos associados a uma matriz item
-	 * x item em um objeto Validation compativel com o CPrefMiner Multi.
-	 * 
-	 * @param matrix
-	 *            matriz item x item de um usuario/cluster
-	 * @param features
-	 *            mapa com os atributos/caracteristicas de um filme
-	 * @return Um objeto Validation do CPrefMiner Multi, de tal modo que sao
-	 *         possivel executar o minerador sobre as avaliacoes da matriz
-	 *         considerando as caracteristicas dos itens.
-	 * @throws Exception
-	 *             -
-	 */
-	//FIXME Precisamos de um mapa da forma Map<Integer,Integer> onde a 
-	// chave sao o indice da matriz e o valor sao o ID do item (filme)
-	public Validation toValidation(Double[][] matrix,
-			Map<Key, FullTuple> features, Map<Integer,Integer> itemList) throws Exception {
-		ArrayList<Bituple> bituples = new ArrayList<>();
-
-		Double d = 0.5;
-		Key k1, k2;
-		for (int i = 0; i < matrix.length; i++) {
-			for (int j = 0; j < matrix[i].length; j++) {
-				if (matrix[i][j] > d) {
-					k1 = new Key(itemList.get(i));
-					k2 = new Key(itemList.get(j));
-					FullTuple p1 = features.get(k1);
-					FullTuple p2 = features.get(k2);
-					Bituple b = new Bituple(p1, p2, new PrefValue(1));
-					bituples.add(b);
-				}
-			}
-		}
-
-		Map<Integer, String> relsNameMap = new HashMap<>();
-		for (int i = 0; i < (attributes.length - 1); i++) {
-			relsNameMap.put(i, "" + i);
-		}
-
-		ArrayList<PrefDatabase> prefDatabases = new ArrayList<>();
-		prefDatabases.add(new PrefDatabase(bituples));
-		BitupleOutput bo = new BitupleOutput();
-		bo.setListPDB(prefDatabases);
-
-		Start.prepareRandomSeed();
-
-		return new Validation(bo);
-	}
-
-	public PrefDatabase toPrefDatabase(Map<Integer, Double> ids) {
-		ArrayList<Bituple> bituples = new ArrayList<>();
-		for (Map.Entry<Integer, Double> i : ids.entrySet()) {
-			for (Map.Entry<Integer, Double> j : ids.entrySet()) {
-				if (i != j && i.getValue() > j.getValue()) { // nao pode ser o
-																// mesmo item e
-																// o item da
-																// esquerda deve
-																// ser preferido
-																// (nota maior)
-																// que o item da
-																// direita
-					Bituple b = new Bituple(
-							features.get(new Key(i.getKey())),
-							features.get(new Key(j.getKey())),
-							new PrefValue(1));
-					bituples.add(b);
-				}
-			}
-		}
-		return bituples.isEmpty() ? null : new PrefDatabase(bituples);
-	}
-
-	public Validation getValidation(Double[][] choosenConcensualMatrix) {
-		return this.validationMap.get(choosenConcensualMatrix);
-	}
-}
