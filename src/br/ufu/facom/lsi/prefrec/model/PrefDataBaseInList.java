@@ -76,10 +76,10 @@ public class PrefDataBaseInList<E extends PrefDataBaseIn> extends
 	}
 
 	private HashMap<Integer, List<User>> initHash() {
-		HashMap<Integer, List<User>> result = new HashMap<Integer, List<User>>();
+		final HashMap<Integer, List<User>> result = new HashMap<Integer, List<User>>();
 		Set<Integer> folds = new HashSet<Integer>();
-		this.parallelStream().forEach(prefData -> folds.add(prefData.getFold()));
-		folds.parallelStream().forEach(
+		this.stream().forEach(prefData -> folds.add(prefData.getFold()));
+		folds.stream().forEach(
 				id -> result.put(id, new ArrayList<User>()));
 		return result;
 	}
