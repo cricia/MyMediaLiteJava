@@ -359,7 +359,7 @@ public class TimeAwareBaseline extends TimeAwareRatingPredictor implements IIter
    */
   public double computeLoss() {
     double loss =
-        2 * Ratings.evaluate(this, ratings).get("RMSE")
+        2 * Ratings.evaluate(this, ratings, null).get("RMSE")
             + regU                 * Math.pow(VectorExtensions.euclideanNorm(user_bias),                 2)
             + regI                 * Math.pow(VectorExtensions.euclideanNorm(item_bias),                 2)
             + regAlpha             * Math.pow(VectorExtensions.euclideanNorm(alpha),                     2)

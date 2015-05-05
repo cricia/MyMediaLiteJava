@@ -157,7 +157,7 @@ public class RatingsCrossValidation {
         split_recommenders[i].setRatings(split.train().get(i));
         split_recommenders[i].train();
         iterative_recommenders[i] = (IIterativeModel) split_recommenders[i];
-        HashMap<String, Double> fold_results = Ratings.evaluate(split_recommenders[i], split.test().get(i));
+        HashMap<String, Double> fold_results = Ratings.evaluate(split_recommenders[i], split.test().get(i), null);
         System.out.println("fold " + i + " " + fold_results + " iteration " + iterative_recommenders[i].getNumIter());
       } catch (Exception e) {
         System.err.println("===> ERROR: " + e.getMessage());
@@ -172,7 +172,7 @@ public class RatingsCrossValidation {
           iterative_recommenders[i].iterate();
 
           if (it % find_iter == 0) {
-            HashMap<String, Double> fold_results = Ratings.evaluate(split_recommenders[i], split.test().get(i));
+            HashMap<String, Double> fold_results = Ratings.evaluate(split_recommenders[i], split.test().get(i), null);
             System.out.println("fold " + i + " " + fold_results + " iteration " + it);
           }
         } catch (Exception e) {

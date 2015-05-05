@@ -418,11 +418,11 @@ public class RatingPrediction {
 
 				if (compute_fit)
 					System.out.println("Fit "
-							+ Ratings.evaluate(recommender, training_data)
+							+ Ratings.evaluate(recommender, training_data, null)
 							+ " iteration "
 							+ iterative_recommender.getNumIter());
 
-				System.out.println(Ratings.evaluate(recommender, test_data)
+				System.out.println(Ratings.evaluate(recommender, test_data, null)
 						+ " iteration " + iterative_recommender.getNumIter());
 
 				for (int it = iterative_recommender.getNumIter() + 1; it <= max_iter; it++) {
@@ -437,7 +437,7 @@ public class RatingPrediction {
 							System.out
 									.println("Fit "
 											+ Ratings.evaluate(recommender,
-													training_data)
+													training_data, null)
 											+ " iteration " + it);
 							fit_time_stats.add((double) (Calendar.getInstance()
 									.getTimeInMillis() - start) / 1000);
@@ -445,7 +445,7 @@ public class RatingPrediction {
 
 						HashMap<String, Double> results = null;
 						start = Calendar.getInstance().getTimeInMillis();
-						results = Ratings.evaluate(recommender, test_data);
+						results = Ratings.evaluate(recommender, test_data, null);
 						eval_time_stats.add((double) (Calendar.getInstance()
 								.getTimeInMillis() - start) / 1000);
 						rmse_eval_stats.add(results.get("RMSE"));
@@ -511,10 +511,12 @@ public class RatingPrediction {
 				if (online_eval)
 					System.out.println(RatingsOnline.evaluateOnline(
 							recommender, test_data));
-				else
+				else {
+					PrefDataBaseInList<PrefDataBaseIn> list = new PrefDataBaseInList<PrefDataBaseIn>();
 					System.out
-							.println(Ratings.evaluate(recommender, test_data));
-
+							.println(Ratings.evaluate(recommender, test_data, list));
+					list.writeObject();
+				}
 				System.out
 						.println("Testing time: "
 								+ (double) (Calendar.getInstance()
@@ -525,7 +527,7 @@ public class RatingPrediction {
 					System.out.print("Fit:");
 					start = Calendar.getInstance().getTimeInMillis();
 					System.out.print(Ratings.evaluate(recommender,
-							training_data));
+							training_data, null));
 					System.out.println(" fit time: "
 							+ (double) (Calendar.getInstance()
 									.getTimeInMillis() - start) / 1000);
@@ -572,6 +574,7 @@ public class RatingPrediction {
 					itemRateMap.put(Integer.parseInt(item_mapping.toOriginalID(item.getId().intValue())), item.getRate());
 					itemPredictionMap.put(Integer.parseInt(item_mapping.toOriginalID(item.getId().intValue())),
 							item.getPrediction());
+					//System.out.println("UserID "+ user_mapping.toOriginalID(user.getId().intValue())+" Iditem:"+item_mapping.toOriginalID(item.getId().intValue()));
 				}
 				
 				PrefDatabase prefDatabaseRate = miner
@@ -583,7 +586,7 @@ public class RatingPrediction {
 				Validation v = new Validation();
 				v.buildModel(prefDatabasePredictiion);
 				v.runOverModel(3, prefDatabaseRate);
-				content.append(user.getId() + ";" + fold + ";" + v.getAvPrecision() + ";" + v.getAvRecall()+ System.lineSeparator());				
+				content.append(user_mapping.toOriginalID(user.getId().intValue()) + ";" + fold + ";" + v.getAvPrecision() + ";" + v.getAvRecall()+ System.lineSeparator());				
 			}
 			bw.write(content.toString());
 			bw.flush();
@@ -819,6 +822,7 @@ class Miner {
 				this.validationMap.put(concensualMatrix, validation);
 			}
 		} catch (Exception e) {
+			
 			throw e;
 		}
 
@@ -831,7 +835,7 @@ class Miner {
 
 		Integer[] maxMult = { 3, 3, 6, 4, 1,4, 0 };//director,genre,language,star,year,country,user
 
-		Database d = new Database("../miningoutput/Flixster/", attribsList, "user.cpm",
+		Database d = new Database("../miningoutput/Fbprefrec/", attribsList, "user.cpm",
 				maxMult, ',');
 		Map<Key, FullTuple> tuples = d.getMapFullTuples();
 		return tuples;

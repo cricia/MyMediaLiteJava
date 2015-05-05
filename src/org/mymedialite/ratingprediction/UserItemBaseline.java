@@ -240,7 +240,7 @@ public class UserItemBaseline extends IncrementalRatingPredictor implements IIte
   @Override
   public double computeLoss() {
     return
-        Ratings.evaluate(this, ratings).get("RMSE")
+        Ratings.evaluate(this, ratings, null).get("RMSE")
         + regU * Math.pow(org.mymedialite.datatype.VectorExtensions.euclideanNorm(userBiases), 2)
         + regI * Math.pow(org.mymedialite.datatype.VectorExtensions.euclideanNorm(itemBiases), 2);
   }

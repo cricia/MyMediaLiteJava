@@ -399,7 +399,7 @@ public class CoClustering extends RatingPredictor implements IIterativeModel {
    * 
    */
   public double computeLoss() {
-    return Ratings.evaluate(this, ratings).get("RMSE");
+    return Ratings.evaluate(this, ratings, null).get("RMSE");
   }
 
   /**

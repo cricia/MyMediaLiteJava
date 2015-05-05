@@ -60,7 +60,7 @@ public class RatingPredictionExample {
     recommender.train();
 
     // Measure the accuracy on the test data set
-    Map<String, Double> results = org.mymedialite.eval.Ratings.evaluate(recommender, test_data);
+    Map<String, Double> results = org.mymedialite.eval.Ratings.evaluate(recommender, test_data, null);
     System.out.println("RMSE=" + results.get("RMSE") + " MAE=" + results.get("MAE"));
 
     // Make a prediction for a certain user and item

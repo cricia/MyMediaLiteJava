@@ -86,7 +86,8 @@ public class Ratings {
 	 * @return a Dictionary containing the evaluation results
 	 */
 	public static RatingPredictionEvaluationResults evaluate(
-			IRatingPredictor recommender, IRatings ratings) {
+			IRatingPredictor recommender, IRatings ratings,
+			PrefDataBaseInList<PrefDataBaseIn> listPrefData) {
 		double rmse = 0;
 		double mae = 0;
 		double cbd = 0;
@@ -125,6 +126,16 @@ public class Ratings {
 				mae += Math.abs(error);
 				cbd += computeCBD(ratings.get(index), prediction,
 						ratings.minRating(), ratings.maxRating());
+
+				if (listPrefData != null) {
+					PrefDataBaseIn pref = new PrefDataBaseIn();
+					pref.setPrediction(prediction);
+					pref.setItem(ratings.items().get(index));
+					pref.setRate(ratings.get(index));
+					pref.setUser(ratings.users().get(index));
+					pref.setFold(0);
+					listPrefData.add(pref);
+				}
 			}
 		}
 
@@ -251,7 +262,8 @@ public class Ratings {
 	 *            the rating predictor to evaluate
 	 */
 	public static double computeFit(RatingPredictor recommender) {
-		return evaluate(recommender, recommender.getRatings()).get("RMSE");
+		return evaluate(recommender, recommender.getRatings(), null)
+				.get("RMSE");
 	}
 
 }
